@@ -3,11 +3,16 @@
 package com.example.whatdotodo.ui.screen
 
 import android.widget.Toast
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
@@ -19,9 +24,10 @@ import com.example.whatdotodo.data.model.ToDoItem
 fun ToDoListScreen(navController: NavController) {
     val context = LocalContext.current
 
-    val todoList by remember { mutableStateOf(mutableListOf<ToDoItem>()) }
+    val todoList = remember { mutableStateListOf<ToDoItem>() }
     var newTaskTitle by remember { mutableStateOf(TextFieldValue("")) }
     var newTaskCategory by remember { mutableStateOf(TextFieldValue("")) }
+    var showCompleted by remember { mutableStateOf(false) } // Collapsible completed tasks
 
     Column(
         modifier = Modifier
@@ -74,26 +80,71 @@ fun ToDoListScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
+        Text("Pending Tasks", style = MaterialTheme.typography.titleLarge)
+
         LazyColumn(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(todoList) { task ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(task.title, style = MaterialTheme.typography.bodyLarge)
-                        Text("Category: ${task.category}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
+            items(todoList.filter { !it.done }) { task ->
+                TaskItem(task = task, onCheckedChange = { checked ->
+                    task.done = checked
+                })
             }
         }
 
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showCompleted = !showCompleted }
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (showCompleted) Icons.Filled.ArrowDropDown else Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null
+            )
+            Text("Completed Tasks", style = MaterialTheme.typography.titleLarge)
+        }
+
+        if (showCompleted) {
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(todoList.filter { it.done }) { task ->
+                    TaskItem(task = task, onCheckedChange = { checked ->
+                        task.done = checked
+                    })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TaskItem(task: ToDoItem, onCheckedChange: (Boolean) -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(task.title, style = MaterialTheme.typography.bodyLarge)
+                Text("Category: ${task.category}", style = MaterialTheme.typography.bodySmall)
+            }
+            Checkbox(
+                checked = task.done,
+                onCheckedChange = onCheckedChange
+            )
+        }
     }
 }
