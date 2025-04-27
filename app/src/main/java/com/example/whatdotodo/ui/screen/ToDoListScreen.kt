@@ -1,5 +1,3 @@
-// ui/screen/ToDoListScreen.kt
-
 package com.example.whatdotodo.ui.screen
 
 import android.widget.Toast
@@ -8,8 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,10 +17,14 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.whatdotodo.data.model.ToDoItem
+import com.example.whatdotodo.service.NotificationHelper
+
 
 @Composable
 fun ToDoListScreen(navController: NavController) {
     val context = LocalContext.current
+    val notificationHelper = remember { NotificationHelper(context) }
+
 
     val todoList = remember { mutableStateListOf<ToDoItem>() }
     var newTaskTitle by remember { mutableStateOf(TextFieldValue("")) }
@@ -69,6 +71,8 @@ fun ToDoListScreen(navController: NavController) {
                     newTaskTitle = TextFieldValue("")
                     newTaskCategory = TextFieldValue("")
                     Toast.makeText(context, "Task Added", Toast.LENGTH_SHORT).show()
+                    notificationHelper.showNotification(todoList.firstOrNull { !it.done }?.title ?: "No tasks pending")
+
                 } else {
                     Toast.makeText(context, "Task Title cannot be empty", Toast.LENGTH_SHORT).show()
                 }
@@ -87,7 +91,13 @@ fun ToDoListScreen(navController: NavController) {
         ) {
             items(todoList.filter { !it.done }) { task ->
                 TaskItem(task = task, onCheckedChange = { checked ->
-                    task.done = checked
+                    val index = todoList.indexOf(task)
+                    if (index != -1) {
+                        todoList[index] = task.copy(done = checked)
+                        notificationHelper.showNotification(
+                            todoList.firstOrNull { !it.done }?.title ?: "No tasks pending"
+                        )
+                    }
                 })
             }
         }
@@ -102,7 +112,7 @@ fun ToDoListScreen(navController: NavController) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (showCompleted) Icons.Filled.ArrowDropDown else Icons.AutoMirrored.Filled.ArrowForward,
+                imageVector = if (showCompleted) Icons.Filled.ArrowDropDown else Icons.Filled.ArrowForward,
                 contentDescription = null
             )
             Text("Completed Tasks", style = MaterialTheme.typography.titleLarge)
@@ -114,7 +124,10 @@ fun ToDoListScreen(navController: NavController) {
             ) {
                 items(todoList.filter { it.done }) { task ->
                     TaskItem(task = task, onCheckedChange = { checked ->
-                        task.done = checked
+                        val index = todoList.indexOf(task)
+                        if (index != -1) {
+                            todoList[index] = task.copy(done = checked)
+                        }
                     })
                 }
             }
