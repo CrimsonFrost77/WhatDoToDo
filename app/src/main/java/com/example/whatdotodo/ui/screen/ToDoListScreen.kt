@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.whatdotodo.data.model.ToDoItem
 import com.example.whatdotodo.service.NotificationHelper
-
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.input.pointer.pointerInput
 
 @Composable
 fun ToDoListScreen(navController: NavController) {
@@ -86,19 +89,52 @@ fun ToDoListScreen(navController: NavController) {
 
         Text("Pending Tasks", style = MaterialTheme.typography.titleLarge)
 
+        val coroutineScope = rememberCoroutineScope()
+        val listState = rememberLazyListState()
+
+        var draggedItemIndex by remember { mutableStateOf<Int?>(null) }
+
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxWidth()
         ) {
-            items(todoList.filter { !it.done }) { task ->
-                TaskItem(task = task, onCheckedChange = { checked ->
-                    val index = todoList.indexOf(task)
-                    if (index != -1) {
-                        todoList[index] = task.copy(done = checked)
-                        notificationHelper.showNotification(
-                            todoList.firstOrNull { !it.done }?.title ?: "No tasks pending"
-                        )
-                    }
-                })
+            itemsIndexed(todoList.filter { !it.done }) { index, task ->
+                val realIndex = todoList.indexOf(task)
+
+                TaskItem(
+                    task = task,
+                    onCheckedChange = { checked ->
+                        val globalIndex = todoList.indexOf(task)
+                        if (globalIndex != -1) {
+                            todoList[globalIndex] = task.copy(done = checked)
+                            notificationHelper.showNotification(
+                                todoList.firstOrNull { !it.done }?.title ?: "No tasks pending"
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    draggedItemIndex = realIndex
+                                },
+                                onDragEnd = {
+                                    draggedItemIndex = null
+                                    // update notification again just to be safe
+                                    notificationHelper.showNotification(
+                                        todoList.firstOrNull { !it.done }?.title ?: "No tasks pending"
+                                    )
+                                },
+                                onDrag = { change, dragAmount ->
+                                    val targetIndex = realIndex + if (dragAmount.y > 0) 1 else -1
+                                    if (targetIndex in todoList.indices && targetIndex != realIndex) {
+                                        todoList.swap(realIndex, targetIndex)
+                                        draggedItemIndex = targetIndex
+                                    }
+                                }
+                            )
+                        }
+                )
             }
         }
 
@@ -136,9 +172,14 @@ fun ToDoListScreen(navController: NavController) {
 }
 
 @Composable
-fun TaskItem(task: ToDoItem, onCheckedChange: (Boolean) -> Unit) {
+fun TaskItem(
+    task: ToDoItem,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         colors = CardDefaults.cardColors(
@@ -160,4 +201,11 @@ fun TaskItem(task: ToDoItem, onCheckedChange: (Boolean) -> Unit) {
             )
         }
     }
+}
+
+
+fun <T> MutableList<T>.swap(index1: Int, index2: Int) {
+    val tmp = this[index1]
+    this[index1] = this[index2]
+    this[index2] = tmp
 }

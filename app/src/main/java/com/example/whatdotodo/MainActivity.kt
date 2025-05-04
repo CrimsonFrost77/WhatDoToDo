@@ -2,6 +2,7 @@
 
 package com.example.whatdotodo
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,10 @@ import com.example.whatdotodo.ui.theme.WhatDoToDoTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+
         setContent {
             WhatDoToDoTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
@@ -30,3 +35,4 @@ fun MainApp() {
     val navController = rememberNavController()
     AppNavigation(navController = navController)
 }
+
